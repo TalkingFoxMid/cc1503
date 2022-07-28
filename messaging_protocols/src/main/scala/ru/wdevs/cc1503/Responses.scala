@@ -14,8 +14,8 @@ object Responses {
   implicit val dec: Decoder[MessagingResponseDTO] = deriveDecoder
 
   sealed trait MessagingResponseDTO
-  case class MessageSaved() extends MessagingResponseDTO
 
-  case class MessageDTO(text: String)
-  case class Messages(msgs: List[MessageDTO]) extends MessagingResponseDTO
+  case class MessageSaved() extends MessagingResponseDTO
+  case class SessionWasInitialized() extends MessagingResponseDTO
+  case class RequestError(msg: String) extends MessagingResponseDTO
 }

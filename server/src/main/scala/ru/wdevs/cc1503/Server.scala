@@ -6,9 +6,9 @@ import org.http4s.server.Router
 import cats.syntax.all._
 import org.typelevel.log4cats.Logger
 
-class Server[F[_]: Async] {
+class Server[F[_]: Async: Logger] {
   def start(wsComp: WSRoutesComponent[F]): F[Unit] = for {
-//    _ <- Logger[F].info("Server is starting...")
+    _ <- Logger[F].info("Server is starting...")
     _ <- BlazeServerBuilder[F]
       .bindHttp(8080, "localhost")
       .withHttpWebSocketApp(wsb => Router("/" -> wsComp.routes(wsb)).orNotFound)

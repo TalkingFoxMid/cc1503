@@ -22,7 +22,15 @@ object WebSocketStreamFs2 extends App {
 
   def webSocketFramePipe: Pipe[IO, WebSocketFrame.Data[_], WebSocketFrame] =
     PipeParser.parsePipe[IO, Responses.MessagingResponseDTO, Requests.MessagingRequestDTO](
-      i => Stream.emit(FetchMessagesDTO("omg"))
+      i => Stream.emits(
+        List(
+          CreateMessageDTO("data", "omg"),
+          InitSession("amogus"),
+          CreateMessageDTO("data", "omg"),
+          CreateMessageDTO("data", "omg2"),
+          InitSession("amogus2")
+        )
+      ) ++ i.map(println).filter(_ => false).map(_ => InitSession(""))
     )
 
   AsyncHttpClientFs2Backend

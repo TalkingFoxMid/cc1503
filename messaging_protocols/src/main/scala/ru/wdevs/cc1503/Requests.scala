@@ -14,6 +14,6 @@ object Requests {
 
   sealed trait MessagingRequestDTO
 
-  case class CreateMessageDTO(text: String, channelId: String) extends MessagingRequestDTO
-  case class FetchMessagesDTO(channelId: String) extends MessagingRequestDTO
+  case class CreateMessageDTO(channelId: String, text: String) extends MessagingRequestDTO
+  case class InitSession(uuid: String) extends MessagingRequestDTO
 }

@@ -19,7 +19,8 @@ val commonSettings = Seq(
     "org.typelevel" %% "log4cats-core"    % "2.4.0",
     "org.typelevel" %% "log4cats-slf4j"   % "2.4.0"
   ),
-    addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
+  libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.36",
+  addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
 
 
 

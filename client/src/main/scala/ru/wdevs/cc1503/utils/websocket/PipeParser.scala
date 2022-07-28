@@ -5,13 +5,17 @@ import cats.effect.IO
 import io.circe.{Decoder, Encoder}
 import sttp.ws.WebSocketFrame
 import io.circe.syntax._
+import ru.wdevs.cc1503.Responses.{Messages, MessagingResponseDTO, en}
+import io.circe._, io.circe.parser._
 
 object PipeParser {
   def parsePipe[F[_], In: Decoder, Out: Encoder](pipe: Pipe[F, In, Out]): Pipe[F, WebSocketFrame.Data[_], WebSocketFrame] = {
     pipe
       .compose[Stream[F, WebSocketFrame.Data[_]]](
         _.map {
-          case WebSocketFrame.Text(p, _, _) => Decoder[In].decodeJson(p.asJson).getOrElse(throw new NullPointerException())
+          case WebSocketFrame.Text(p, _, _) =>
+            parse(p).flatMap(Decoder[In].decodeJson)
+            .getOrElse(throw new NullPointerException())
         })
       .andThen(
         _.map(
