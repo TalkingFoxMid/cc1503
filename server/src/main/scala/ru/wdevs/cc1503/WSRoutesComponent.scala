@@ -1,9 +1,10 @@
 package ru.wdevs.cc1503
 
-import cats.effect.kernel.Async
+import cats.effect.kernel.{Async, Sync}
 import org.http4s.HttpRoutes
 import org.http4s.server.websocket.WebSocketBuilder2
 import org.typelevel.log4cats.Logger
+import ru.wdevs.cc1503.anouncements.MessageAnnouncer
 import ru.wdevs.cc1503.endpoints.{EchoReverseWSHandler, MessagingWSHandler}
 import ru.wdevs.cc1503.storing.MessageStore
 import sttp.tapir.server.http4s.Http4sServerInterpreter
@@ -14,7 +15,7 @@ trait WSRoutesComponent[F[_]] {
 
 object WSRoutesComponent {
 
-  def mkAsync[F[_]: Async: Logger](ms: MessageStore[F]): WSRoutesComponent[F] =
+  def mkAsync[F[_]: Async: Logger](ms: MessageStore[F], announcer: MessageAnnouncer[F]): WSRoutesComponent[F] =
     new WSRoutesComponent[F] {
 
       override def routes: WebSocketBuilder2[F] => HttpRoutes[F] =
@@ -22,7 +23,7 @@ object WSRoutesComponent {
           .toWebSocketRoutes(
             List(
               new EchoReverseWSHandler[F]().buildWithLogic,
-              new MessagingWSHandler[F](ms).buildWithLogic
+              new MessagingWSHandler[F](ms, announcer).buildWithLogic
             )
           )
     }

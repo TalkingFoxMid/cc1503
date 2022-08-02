@@ -26,9 +26,9 @@ object WebSocketStreamFs2 extends App {
         List(
           CreateMessageDTO("data", "omg"),
           InitSession("amogus"),
-          CreateMessageDTO("data", "omg"),
-          CreateMessageDTO("data", "omg2"),
-          InitSession("amogus2")
+          CreateMessageDTO("chat1", "aaa"),
+          CreateMessageDTO("chat2", "bbbb")
+
         )
       ) ++ i.map(println).filter(_ => false).map(_ => InitSession(""))
     )

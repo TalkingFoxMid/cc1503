@@ -5,7 +5,7 @@ import cats.effect.IO
 import io.circe.{Decoder, Encoder}
 import sttp.ws.WebSocketFrame
 import io.circe.syntax._
-import ru.wdevs.cc1503.Responses.{Messages, MessagingResponseDTO, en}
+import ru.wdevs.cc1503.Responses.{MessagingResponseDTO, en}
 import io.circe._, io.circe.parser._
 
 object PipeParser {

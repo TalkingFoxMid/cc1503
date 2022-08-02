@@ -8,6 +8,7 @@ import ru.wdevs.cc1503.domain.Channels.Channel
 import ru.wdevs.cc1503.storing.MessageStore.StoredMessage
 import ru.wdevs.cc1503.storing.{MessageStore, MessageStoreLocalImpl}
 import org.typelevel.log4cats.slf4j._
+import ru.wdevs.cc1503.anouncements.LocalMessageAnnouncer
 
 import java.util.logging.Level
 object Main extends IOApp {
@@ -19,7 +20,8 @@ object Main extends IOApp {
       implicit0(logger: Logger[IO]) <- Slf4jLogger.create[IO]
       server = new Server[IO]
       ms: MessageStore[IO] = new MessageStoreLocalImpl[IO](ref)
-      wsComponent = WSRoutesComponent.mkAsync[IO](ms)
+      lma <- LocalMessageAnnouncer.make[IO]
+      wsComponent = WSRoutesComponent.mkAsync[IO](ms, lma)
       _ <- server.start(wsComponent)
 
     } yield ExitCode.Success

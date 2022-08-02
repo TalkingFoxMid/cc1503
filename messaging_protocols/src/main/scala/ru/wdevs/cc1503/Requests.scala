@@ -16,4 +16,5 @@ object Requests {
 
   case class CreateMessageDTO(channelId: String, text: String) extends MessagingRequestDTO
   case class InitSession(uuid: String) extends MessagingRequestDTO
+  case class SubscribeChat(chatId: String) extends MessagingRequestDTO
 }
