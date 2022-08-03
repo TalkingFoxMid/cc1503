@@ -1,10 +1,10 @@
 package ru.wdevs.cc1503
 
 
-import cats.effect.IO
+import cats.effect.{ExitCode, IO, IOApp}
 import cats.effect.unsafe.IORuntime
 import fs2.{Pipe, Stream}
-import sttp.capabilities.fs2.Fs2Streams
+import sttp.capabilities.fs2._
 import sttp.client3._
 import sttp.client3.asynchttpclient.fs2.AsyncHttpClientFs2Backend
 import sttp.ws.WebSocketFrame
@@ -14,33 +14,11 @@ import sttp.tapir.{Codec, CodecFormat, DecodeResult}
 import sttp.tapir.json.circe._
 import sttp.tapir.generic.auto._
 import io.circe.generic.auto._
+import ru.wdevs.cc1503.WebsocketClient.SendMessage
 import ru.wdevs.cc1503.utils.websocket.PipeParser
 
-object WebSocketStreamFs2 extends App {
-  implicit val runtime: IORuntime = cats.effect.unsafe.implicits.global
-  val cd = implicitly[Codec[WebSocketFrame, MessagingRequestDTO, CodecFormat.Json]]
+object WebSocketStreamFs2 extends IOApp {
+  implicit val fsW = Fs2Streams[IO]
 
-  def webSocketFramePipe: Pipe[IO, WebSocketFrame.Data[_], WebSocketFrame] =
-    PipeParser.parsePipe[IO, Responses.MessagingResponseDTO, Requests.MessagingRequestDTO](
-      i => Stream.emits(
-        List(
-          CreateMessageDTO("data", "omg"),
-          InitSession("amogus"),
-          CreateMessageDTO("chat1", "aaa"),
-          CreateMessageDTO("chat2", "bbbb")
-
-        )
-      ) ++ i.map(println).filter(_ => false).map(_ => InitSession(""))
-    )
-
-  AsyncHttpClientFs2Backend
-    .resource[IO]()
-    .use { backend => {
-      basicRequest
-        .response(asWebSocketStream(Fs2Streams[IO])(webSocketFramePipe))
-        .get(uri"ws://127.0.0.1:8080/messaging")
-        .send(backend)
-    }
-    }
-    .unsafeRunSync()
+  override def run(args: List[String]): IO[ExitCode] = ???
 }

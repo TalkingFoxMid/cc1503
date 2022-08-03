@@ -11,5 +11,5 @@ trait MessageAnnouncer[F[_]] {
 }
 
 object MessageAnnouncer {
-  case class AnnounceMessage(chatId: Channel.Id)
+  case class AnnounceMessage(chatId: Channel.Id, text: String)
 }

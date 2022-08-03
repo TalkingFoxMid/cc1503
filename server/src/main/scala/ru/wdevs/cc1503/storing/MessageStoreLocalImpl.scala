@@ -6,8 +6,8 @@ import ru.wdevs.cc1503.domain.Messaging.Message
 import ru.wdevs.cc1503.storing.MessageStore.StoredMessage
 
 class MessageStoreLocalImpl[F[_]: Sync](ref: Ref[F, Map[Channel.Id, List[StoredMessage]]]) extends MessageStore[F] {
-  override def saveMessage(text: String, channelId: Channel.Id): F[Unit] = {
-    val sm = StoredMessage(text)
+  override def saveMessage(text: String, channelId: Channel.Id, author: String): F[Unit] = {
+    val sm = StoredMessage(text, author)
 
     for {
       _ <- ref.update(
@@ -19,8 +19,8 @@ class MessageStoreLocalImpl[F[_]: Sync](ref: Ref[F, Map[Channel.Id, List[StoredM
     } yield ()
   }
 
-  override def getMessages(chId: Channel.Id): F[List[StoredMessage]] =
+  override def getMessages(chId: Channel.Id, limit: Int): F[List[StoredMessage]] =
     for {
       chIdToMessages <- ref.get
-    } yield chIdToMessages.getOrElse(chId, List.empty)
+    } yield chIdToMessages.getOrElse(chId, List.empty).take(limit)
 }

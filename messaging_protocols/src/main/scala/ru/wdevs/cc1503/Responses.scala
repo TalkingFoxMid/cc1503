@@ -18,5 +18,9 @@ object Responses {
   case class MessageSaved() extends MessagingResponseDTO
   case class SessionWasInitialized() extends MessagingResponseDTO
   case class RequestError(msg: String) extends MessagingResponseDTO
-  case class IncomingMessage(chatId: String) extends MessagingResponseDTO
+  case class IncomingMessage(chatId: String, text: String) extends MessagingResponseDTO
+  case class SubscribedToChat(chatId: String) extends MessagingResponseDTO
+
+  case class MessageHistory(chatId: String, messages: List[ChatMessage]) extends MessagingResponseDTO
+  case class ChatMessage(text: String, author: String)
 }

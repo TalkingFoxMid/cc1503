@@ -38,10 +38,19 @@ class MessagingWSHandler[F[_]: Async: Logger](
   private def processRequest(req: MessagingRequestDTO, session: Option[String]): F[MessagingResponseDTO] =
     (req, session) match {
       case (InitSession(uuid), Some(session)) => RequestError("Session already exists").pure[F].widen
-      case (InitSession(uuid), None)          => SessionWasInitialized().pure[F].widen
+      case (InitSession(uuid), None) => SessionWasInitialized().pure[F].widen
+      case (SubscribeChat(chatId), Some(session)) =>
+        SubscribedToChat(chatId).pure[F].widen
+
+      case (ReadMessages(chatId, limit), Some(session)) =>
+        ms.getMessages(Channel.Id(chatId), limit)
+          .map(
+            msgs => MessageHistory(chatId, msgs.map(msg => ChatMessage(msg.text, msg.author)))
+          )
+
       case (CreateMessageDTO(channelId, text), Some(session)) =>
         for {
-          _ <- ms.saveMessage(text, Channel.Id(channelId))
+          _ <- ms.saveMessage(text, Channel.Id(channelId), session)
           _ <- announcer.announce(Channel.Id(channelId), text)
           _ <- Logger[F].info(s"Message was saved by $session")
         } yield MessageSaved()
@@ -58,9 +67,9 @@ class MessagingWSHandler[F[_]: Async: Logger](
           ).pull.echo
 
 
-        case Some((RequestWithMetadata(SubscribeChat(chatId), session), remain)) => {
+        case Some((RequestWithMetadata(SubscribeChat(chatId), Some(_)), remain)) => {
           announcer.subscribe(Channel.Id(chatId))
-            .map(e => IncomingMessage(e.chatId.id))
+            .map(e => IncomingMessage(e.chatId.id, e.text))
             .merge(processStreamRec(remain))
         }.pull.echo
 
