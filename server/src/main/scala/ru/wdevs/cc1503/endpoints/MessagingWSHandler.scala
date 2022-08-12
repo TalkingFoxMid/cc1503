@@ -19,12 +19,14 @@ import cats.syntax.all._
 import org.typelevel.log4cats.Logger
 import ru.wdevs.cc1503.anouncements.MessageAnnouncer
 import ru.wdevs.cc1503.anouncements.MessageAnnouncer.AnnounceMessage
+import ru.wdevs.cc1503.chats.ChatSubscribersRepository
 import ru.wdevs.cc1503.domain.Channels.Channel
 import ru.wdevs.cc1503.endpoints.MessagingWSHandler.RequestWithMetadata
 
 class MessagingWSHandler[F[_]: Async: Logger](
   ms: MessageStore[F],
-  announcer: MessageAnnouncer[F]
+  announcer: MessageAnnouncer[F],
+  subscribers: ChatSubscribersRepository[F]
 ) extends WSHandler[F, MessagingRequestDTO, MessagingResponseDTO] {
   override val _async: Async[F] = Async[F]
 
@@ -40,7 +42,8 @@ class MessagingWSHandler[F[_]: Async: Logger](
       case (InitSession(uuid), Some(session)) => RequestError("Session already exists").pure[F].widen
       case (InitSession(uuid), None) => SessionWasInitialized().pure[F].widen
       case (SubscribeChat(chatId), Some(session)) =>
-        SubscribedToChat(chatId).pure[F].widen
+        subscribers.subscribeChat(Channel.Id(chatId), session)
+          .as(SubscribedToChat(chatId))
 
       case (ReadMessages(chatId, limit), Some(session)) =>
         ms.getMessages(Channel.Id(chatId), limit)
@@ -62,13 +65,21 @@ class MessagingWSHandler[F[_]: Async: Logger](
       s.pull.uncons1.flatMap {
         case Some((req @ RequestWithMetadata(InitSession(uuid), None), remain)) =>
           val response = processRequest(req.req, None)
-          Stream.eval(response).pull.echo >> processStreamRec(
-            remain.map(r => RequestWithMetadata(r.req, Some(uuid)))
-          ).pull.echo
-
+          for {
+            _ <- Stream.eval(response).pull.echo
+            userChats <- Pull.eval(subscribers.userChats(uuid))
+            _ <- {
+              processStreamRec(remain.map(r => RequestWithMetadata(r.req, Some(uuid))))
+                .merge(
+                  announcer.subscribe(userChats)
+                    .map(e => IncomingMessage(e.chatId.id, e.text))
+                )
+            }
+              .pull.echo
+          } yield ()
 
         case Some((RequestWithMetadata(SubscribeChat(chatId), Some(_)), remain)) => {
-          announcer.subscribe(Channel.Id(chatId))
+          announcer.subscribe(Channel.Id(chatId) :: Nil)
             .map(e => IncomingMessage(e.chatId.id, e.text))
             .merge(processStreamRec(remain))
         }.pull.echo

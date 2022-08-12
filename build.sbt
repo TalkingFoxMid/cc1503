@@ -15,14 +15,21 @@ val commonSettings = Seq(
   libraryDependencies += "com.softwaremill.sttp.client3" %% "core" % "3.7.0",
   libraryDependencies += "com.softwaremill.sttp.client3" %% "async-http-client-backend-cats" % "3.7.0",
   libraryDependencies += "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % "3.7.0",
-  libraryDependencies ++= Seq(
+  libraryDependencies += "dev.profunktor" %% "redis4cats-core" % "1.2.0",
+  libraryDependencies += "dev.profunktor" %% "redis4cats-log4cats" % "1.2.0",
+  // https://mvnrepository.com/artifact/dev.profunktor/redis4cats-effects
+  libraryDependencies += "dev.profunktor" %% "redis4cats-effects" % "1.2.0",
+
+    libraryDependencies ++= Seq(
     "org.typelevel" %% "log4cats-core"    % "2.4.0",
     "org.typelevel" %% "log4cats-slf4j"   % "2.4.0"
   ),
   libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.36",
   addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
   libraryDependencies += "org.scalatest" %% "scalatest-flatspec" % "3.2.9" % Test,
-  libraryDependencies += "org.scalatest" %% "scalatest-matchers-core" % "3.2.9" % Test
+  libraryDependencies += "org.scalatest" %% "scalatest-matchers-core" % "3.2.9" % Test,
+  libraryDependencies += "org.scalatest" %% "scalatest-shouldmatchers" % "3.2.9" % Test
+
 
 
 

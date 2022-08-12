@@ -1,5 +1,6 @@
 package ru.wdevs.cc1503
 
+import cats.effect.std.Queue
 import cats.effect.{Async, IO, Ref}
 
 import scala.concurrent.duration.FiniteDuration
@@ -30,13 +31,21 @@ import scala.concurrent.duration._
 
 trait WebsocketClient[F[_]] {
   def run: F[List[MessagingResponseDTO]]
+
+  def triggerAction(req: MessagingRequestDTO): F[Unit]
+
+  def fetchData: F[List[MessagingResponseDTO]]
 }
 
 class WebsocketClientImpl[F[_]: Async](
   evs: List[WebsocketClient.ClientEvent],
   readDuration: FiniteDuration = 10.seconds,
+  writeDataQueue: Queue[F, MessagingRequestDTO],
   readData: Ref[F, List[MessagingResponseDTO]]
 )(implicit ws: Fs2Streams[F]) extends WebsocketClient[F] {
+
+  override def triggerAction(req: MessagingRequestDTO): F[Unit] =
+    writeDataQueue.offer(req)
 
   override def run: F[List[MessagingResponseDTO]] = {
     val wsReqStream = evs.traverse {
@@ -44,12 +53,20 @@ class WebsocketClientImpl[F[_]: Async](
       case SendMessage(msg) => Pull.output1(msg)
     }.void.stream
     val wsStream = PipeParser.parsePipe[F, Responses.MessagingResponseDTO, Requests.MessagingRequestDTO](
-      i => wsReqStream.merge(
+      i => wsReqStream
+        .merge(
+          Pull.loop[F, MessagingRequestDTO, Unit](
+            _ => Pull.eval(writeDataQueue.take)
+              .flatMap(
+                el => Pull.output1(el).map(_ => Some(()))
+              )
+          )(Some(())).stream
+        )
+        .merge(
         i
-          .timeout(readDuration)
-          .handleErrorWith(_ => Stream.empty)
           .flatMap(e => Pull.eval(readData.update(_.appended(e))).stream)
-      )
+      ).timeout(readDuration)
+        .handleErrorWith(_ => Stream.empty)
     )
     AsyncHttpClientFs2Backend
       .resource[F]()
@@ -61,6 +78,8 @@ class WebsocketClientImpl[F[_]: Async](
       }.flatMap(_ => readData.get)
       }
   }
+
+  override def fetchData: F[List[MessagingResponseDTO]] = readData.get
 }
 
 object WebsocketClient {
@@ -72,6 +91,7 @@ object WebsocketClient {
                         readDuration: FiniteDuration = 5.seconds)(implicit ws: Fs2Streams[F]): F[WebsocketClientImpl[F]] = {
     for {
       readData <- Ref.of[F, List[MessagingResponseDTO]](List.empty)
-    } yield new WebsocketClientImpl(evs, readDuration, readData)
+      q <- Queue.unbounded[F, MessagingRequestDTO]
+    } yield new WebsocketClientImpl(evs, readDuration, q, readData)
   }
 }

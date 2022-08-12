@@ -18,8 +18,8 @@ class LocalMessageAnnouncer[F[_]: Async](queue: Queue[F, MessageAnnouncer.Announ
   override def announce(chatId: Channel.Id, text: String): F[Unit] =
     queue.offer(AnnounceMessage(chatId, text))
 
-  override def subscribe(chatId: Channel.Id): fs2.Stream[F, MessageAnnouncer.AnnounceMessage] =
-    eventsStream.filter(_.chatId == chatId)
+  override def subscribe(chatIds: List[Channel.Id]): fs2.Stream[F, MessageAnnouncer.AnnounceMessage] =
+    eventsStream.filter(ev => chatIds.contains(ev.chatId))
 
 }
 
