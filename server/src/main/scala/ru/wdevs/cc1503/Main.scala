@@ -9,6 +9,7 @@ import ru.wdevs.cc1503.storing.MessageStore.StoredMessage
 import ru.wdevs.cc1503.storing.{MessageStore, MessageStoreLocalImpl}
 import org.typelevel.log4cats.slf4j._
 import ru.wdevs.cc1503.anouncements.LocalMessageAnnouncer
+import ru.wdevs.cc1503.chats.ChatSubscribersRepositoryRedis
 
 import java.util.logging.Level
 object Main extends IOApp {
@@ -21,9 +22,12 @@ object Main extends IOApp {
       server = new Server[IO]
       ms: MessageStore[IO] = new MessageStoreLocalImpl[IO](ref)
       lma <- LocalMessageAnnouncer.make[IO]
-      wsComponent = WSRoutesComponent.mkAsync[IO](ms, lma)
-      _ <- server.start(wsComponent)
-
+      _ <- ChatSubscribersRepositoryRedis.mkAsync[IO].use(
+        subscribers => {
+          val ws = WSRoutesComponent.mkAsync[IO](ms, lma, subscribers)
+          server.start(ws)
+        }
+      )
     } yield ExitCode.Success
   }
 }
