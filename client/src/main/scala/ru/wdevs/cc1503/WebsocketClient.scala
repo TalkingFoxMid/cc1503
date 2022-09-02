@@ -64,7 +64,12 @@ class WebsocketClientImpl[F[_]: Async](
         )
         .merge(
         i
-          .flatMap(e => Pull.eval(readData.update(_.appended(e))).stream)
+          .flatMap(
+            e => {
+              println(e)
+              Pull.eval(readData.update(_.appended(e))).stream
+            }
+          )
       ).timeout(readDuration)
         .handleErrorWith(_ => Stream.empty)
     )
@@ -75,7 +80,7 @@ class WebsocketClientImpl[F[_]: Async](
       .use { backend => {
         basicRequest
           .response(asWebSocketStream(Fs2Streams[F])(wsStream))
-          .get(uri"ws://127.0.0.1:8080/messaging")
+          .get(uri"ws://127.0.0.1:8080/ws/messaging")
           .send(backend)
       }.flatMap(_ => readData.get)
       }

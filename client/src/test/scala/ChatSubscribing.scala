@@ -5,6 +5,7 @@ import ru.wdevs.cc1503.Requests.{CreateMessageDTO, InitSession, ReadMessages, Su
 import ru.wdevs.cc1503.Responses.{ChatMessage, MessageHistory, MessageSaved, SessionWasInitialized, SubscribedToChat}
 import ru.wdevs.cc1503.WebsocketClient
 import ru.wdevs.cc1503.WebsocketClient.SendMessage
+import scala.concurrent.duration._
 
 class ChatSubscribing extends AnyFlatSpec {
   "client" should "Subscribe to chat" in new IntegrationTest {
@@ -15,7 +16,8 @@ class ChatSubscribing extends AnyFlatSpec {
         List(
           InitSession("amogus"),
           SubscribeChat(chatId)
-        ).map(SendMessage)
+        ).map(SendMessage),
+        readDuration = 1.hour
       )
       data <- cl.run
     } yield {
