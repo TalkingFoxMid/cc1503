@@ -10,6 +10,7 @@ import ru.wdevs.cc1503.storing.{MessageStore, MessageStoreLocalImpl}
 import org.typelevel.log4cats.slf4j._
 import ru.wdevs.cc1503.anouncements.LocalMessageAnnouncer
 import ru.wdevs.cc1503.chats.ChatSubscribersRepositoryRedis
+import ru.wdevs.cc1503.config.ConfigLoaderImpl
 import ru.wdevs.cc1503.infra.config.ConfigLoaderImpl
 
 import java.util.logging.Level
