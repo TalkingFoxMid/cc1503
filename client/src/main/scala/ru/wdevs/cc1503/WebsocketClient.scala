@@ -68,6 +68,8 @@ class WebsocketClientImpl[F[_]: Async](
       ).timeout(readDuration)
         .handleErrorWith(_ => Stream.empty)
     )
+
+
     AsyncHttpClientFs2Backend
       .resource[F]()
       .use { backend => {

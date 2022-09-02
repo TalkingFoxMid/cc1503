@@ -78,7 +78,6 @@ class MessagingWSHandler[F[_]: Async: Logger](
           }.pull.echo
       } yield ()
       case (SubscribeChat(chatId), Some(session)) =>
-        println("OMG")
         for {
           _ <- Pull.eval(subscribers.subscribeChat(Channel.Id(chatId), session))
           _ <- Stream.emit(SubscribedToChat(chatId))

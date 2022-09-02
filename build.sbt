@@ -19,6 +19,8 @@ val commonSettings = Seq(
   libraryDependencies += "dev.profunktor" %% "redis4cats-log4cats" % "1.2.0",
   // https://mvnrepository.com/artifact/dev.profunktor/redis4cats-effects
   libraryDependencies += "dev.profunktor" %% "redis4cats-effects" % "1.2.0",
+  // https://mvnrepository.com/artifact/com.iheart/ficus
+  libraryDependencies += "com.iheart" %% "ficus" % "1.5.2",
 
     libraryDependencies ++= Seq(
     "org.typelevel" %% "log4cats-core"    % "2.4.0",

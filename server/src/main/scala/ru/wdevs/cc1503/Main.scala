@@ -10,6 +10,7 @@ import ru.wdevs.cc1503.storing.{MessageStore, MessageStoreLocalImpl}
 import org.typelevel.log4cats.slf4j._
 import ru.wdevs.cc1503.anouncements.LocalMessageAnnouncer
 import ru.wdevs.cc1503.chats.ChatSubscribersRepositoryRedis
+import ru.wdevs.cc1503.infra.config.ConfigLoaderImpl
 
 import java.util.logging.Level
 object Main extends IOApp {
@@ -20,6 +21,8 @@ object Main extends IOApp {
       )
       implicit0(logger: Logger[IO]) <- Slf4jLogger.create[IO]
       server = new Server[IO]
+      configLoader = new ConfigLoaderImpl[IO]
+      cfg <- configLoader.loadConfig
       ms: MessageStore[IO] = new MessageStoreLocalImpl[IO](ref)
       lma <- LocalMessageAnnouncer.make[IO]
       _ <- ChatSubscribersRepositoryRedis.mkAsync[IO].use(
