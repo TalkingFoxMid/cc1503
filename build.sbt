@@ -2,6 +2,12 @@ import sbt.Keys.libraryDependencies
 
 ThisBuild / version := "0.1.0-SNAPSHOT"
 
+enablePlugins(DockerPlugin)
+enablePlugins(JavaAppPackaging)
+
+val dockerSettings = Seq(dockerBaseImage := "openjdk:11-jre", dockerExposedPorts := Seq(3000))
+
+
 ThisBuild / scalaVersion := "2.13.8"
 val commonSettings = Seq(
   libraryDependencies += "com.softwaremill.sttp.tapir" %% "tapir-core" % "1.0.1",
