@@ -4,7 +4,8 @@ ThisBuild / version := "0.1.0-SNAPSHOT"
 
 enablePlugins(DockerPlugin)
 enablePlugins(JavaAppPackaging)
-
+Compile / mainClass := Some("ru.wdevs.cc1503.Main")
+run / mainClass := Some("ru.wdevs.cc1503.Main")
 val dockerSettings = Seq(dockerBaseImage := "openjdk:11-jre", dockerExposedPorts := Seq(3000))
 
 
