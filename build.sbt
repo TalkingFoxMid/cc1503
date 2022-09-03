@@ -2,11 +2,10 @@ import sbt.Keys.libraryDependencies
 
 ThisBuild / version := "0.1.0-SNAPSHOT"
 
-
-
 val dockerSettings = Seq(dockerBaseImage := "openjdk:11-jre", dockerExposedPorts := Seq(3000))
 dockerExposedPorts ++= Seq(8080)
-
+enablePlugins(DockerPlugin)
+enablePlugins(JavaAppPackaging)
 ThisBuild / scalaVersion := "2.13.8"
 val commonSettings = Seq(
   libraryDependencies += "com.softwaremill.sttp.tapir" %% "tapir-core" % "1.0.1",
@@ -39,33 +38,28 @@ val commonSettings = Seq(
 )
 lazy val root = (project in file("."))
   .settings(
-    name := "cc1503"
+    name := "cc1503-root"
   ).settings(commonSettings)
-  .enablePlugins(DockerPlugin)
-  .enablePlugins(JavaAppPackaging)
   .dependsOn(client, server)
   .aggregate(client, server)
 
 lazy val server = (project in file("server"))
   .settings(
-    name:= "cc1503",
+    name := "cc1503-server",
     publishArtifact := true
   ).settings(commonSettings)
-  .enablePlugins(DockerPlugin)
-  .enablePlugins(JavaAppPackaging)
   .dependsOn(messaging_protocols)
   .aggregate(messaging_protocols)
 
 lazy val messaging_protocols = (project in file("messaging_protocols"))
   .settings(
-    name:= "cc1503"
+    name := "cc1503-protocols",
+    publishArtifact := true
   ).settings(commonSettings)
 
 lazy val client = (project in file("client"))
   .settings(
-    name:= "cc1503"
+    name := "cc1503-client"
   ).settings(commonSettings)
-  .enablePlugins(DockerPlugin)
-  .enablePlugins(JavaAppPackaging)
   .dependsOn(messaging_protocols)
   .aggregate(messaging_protocols)

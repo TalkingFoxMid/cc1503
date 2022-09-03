@@ -13,7 +13,7 @@ import ru.wdevs.cc1503.chats.ChatSubscribersRepositoryRedis
 import ru.wdevs.cc1503.infra.config.ConfigLoaderImpl
 
 import java.util.logging.Level
-object Main extends IOApp {
+object MainServ extends IOApp {
   override def run(args: List[String]): IO[effect.ExitCode] = {
     for {
       ref <- Ref[IO].of[Map[Channel.Id, List[StoredMessage]]](
