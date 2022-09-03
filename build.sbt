@@ -2,12 +2,10 @@ import sbt.Keys.libraryDependencies
 
 ThisBuild / version := "0.1.0-SNAPSHOT"
 
-enablePlugins(DockerPlugin)
-enablePlugins(JavaAppPackaging)
-Compile / mainClass := Some("ru.wdevs.cc1503.Main")
-run / mainClass := Some("ru.wdevs.cc1503.Main")
-val dockerSettings = Seq(dockerBaseImage := "openjdk:11-jre", dockerExposedPorts := Seq(3000))
 
+
+val dockerSettings = Seq(dockerBaseImage := "openjdk:11-jre", dockerExposedPorts := Seq(3000))
+dockerExposedPorts ++= Seq(8080)
 
 ThisBuild / scalaVersion := "2.13.8"
 val commonSettings = Seq(
@@ -38,24 +36,23 @@ val commonSettings = Seq(
   libraryDependencies += "org.scalatest" %% "scalatest-flatspec" % "3.2.9" % Test,
   libraryDependencies += "org.scalatest" %% "scalatest-matchers-core" % "3.2.9" % Test,
   libraryDependencies += "org.scalatest" %% "scalatest-shouldmatchers" % "3.2.9" % Test
-
-
-
-
-
-
 )
 lazy val root = (project in file("."))
   .settings(
     name := "cc1503"
-  )
+  ).settings(commonSettings)
+  .enablePlugins(DockerPlugin)
+  .enablePlugins(JavaAppPackaging)
   .dependsOn(client, server)
   .aggregate(client, server)
 
 lazy val server = (project in file("server"))
   .settings(
-    name:= "cc1503"
+    name:= "cc1503",
+    publishArtifact := true
   ).settings(commonSettings)
+  .enablePlugins(DockerPlugin)
+  .enablePlugins(JavaAppPackaging)
   .dependsOn(messaging_protocols)
   .aggregate(messaging_protocols)
 
@@ -68,5 +65,7 @@ lazy val client = (project in file("client"))
   .settings(
     name:= "cc1503"
   ).settings(commonSettings)
+  .enablePlugins(DockerPlugin)
+  .enablePlugins(JavaAppPackaging)
   .dependsOn(messaging_protocols)
   .aggregate(messaging_protocols)

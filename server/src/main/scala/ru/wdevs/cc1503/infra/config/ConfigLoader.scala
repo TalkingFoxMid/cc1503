@@ -18,13 +18,3 @@ class ConfigLoaderImpl[F[_]: Sync] extends ConfigLoader[F] {
     config.as[AppConfig]
   }
 }
-
-object T extends IOApp {
-  val cl = new ConfigLoaderImpl[IO]
-
-  override def run(args: List[String]): IO[ExitCode] =
-    for {
-      cfg <- cl.loadConfig
-      _ = println(cfg)
-    } yield ExitCode.Success
-}

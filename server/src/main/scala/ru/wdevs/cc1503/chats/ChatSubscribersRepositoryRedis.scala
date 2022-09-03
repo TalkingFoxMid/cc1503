@@ -45,19 +45,3 @@ object ChatSubscribersRepositoryRedis {
       redisCommands => new ChatSubscribersRepositoryRedis(redisCommands)
     )
 }
-
-object App extends IOApp {
-
-
-  override def run(args: List[String]): IO[ExitCode] =
-    Redis[IO].utf8("redis://localhost").use { redis =>
-      for {
-        res <- redis.sMembers("vff")
-        _ = println(res)
-      } yield ExitCode.Success
-    }
-}
-
-object A extends App {
-  println("x-lang".toLowerCase)
-}

@@ -2,5 +2,4 @@ version: "3.9"
 services:
   cc1503:
     image: cc1503:0.1.0-SNAPSHOT
-    ports:
-      - "8080:8080"
+    network_mode: "host"
