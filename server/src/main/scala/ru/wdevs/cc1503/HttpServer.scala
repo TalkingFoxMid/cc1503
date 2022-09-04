@@ -16,6 +16,7 @@ class HttpServer[F[_]: Async: Logger] {
         config.nodes.get(config.id).flatMap(_.split(":").last.toIntOption),
         new RuntimeException("Failed to find node port")
       )
+      _ = println(port)
       _ <- Logger[F].info("Server is starting...")
       _ <- BlazeServerBuilder[F]
         .bindHttp(port, "localhost")

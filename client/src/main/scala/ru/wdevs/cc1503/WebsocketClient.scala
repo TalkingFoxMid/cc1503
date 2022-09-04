@@ -41,7 +41,8 @@ class WebsocketClientImpl[F[_]: Async](
   evs: List[WebsocketClient.ClientEvent],
   readDuration: FiniteDuration = 10.seconds,
   writeDataQueue: Queue[F, MessagingRequestDTO],
-  readData: Ref[F, List[MessagingResponseDTO]]
+  readData: Ref[F, List[MessagingResponseDTO]],
+  port: Int
 )(implicit ws: Fs2Streams[F]) extends WebsocketClient[F] {
 
   override def triggerAction(req: MessagingRequestDTO): F[Unit] =
@@ -70,8 +71,7 @@ class WebsocketClientImpl[F[_]: Async](
               Pull.eval(readData.update(_.appended(e))).stream
             }
           )
-      ).timeout(readDuration)
-        .handleErrorWith(_ => Stream.empty)
+      ).interruptAfter(readDuration)
     )
 
 
@@ -80,7 +80,7 @@ class WebsocketClientImpl[F[_]: Async](
       .use { backend => {
         basicRequest
           .response(asWebSocketStream(Fs2Streams[F])(wsStream))
-          .get(uri"ws://127.0.0.1:8080/ws/messaging")
+          .get(uri"ws://127.0.0.1:$port/ws/messaging")
           .send(backend)
       }.flatMap(_ => readData.get)
       }
@@ -95,10 +95,11 @@ object WebsocketClient {
   case class SendMessage(msg: Requests.MessagingRequestDTO) extends ClientEvent
 
   def make[F[_]: Async](evs: List[WebsocketClient.ClientEvent],
+                        port: Int = 8080,
                         readDuration: FiniteDuration = 5.seconds)(implicit ws: Fs2Streams[F]): F[WebsocketClientImpl[F]] = {
     for {
       readData <- Ref.of[F, List[MessagingResponseDTO]](List.empty)
       q <- Queue.unbounded[F, MessagingRequestDTO]
-    } yield new WebsocketClientImpl(evs, readDuration, q, readData)
+    } yield new WebsocketClientImpl(evs, readDuration, q, readData, port)
   }
 }

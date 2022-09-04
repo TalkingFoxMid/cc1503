@@ -1,7 +1,17 @@
 version: "3.9"
 services:
-  cc1503:
+  cc1503_1:
     image: cc1503-root:0.1.0-SNAPSHOT
     environment:
       NODE_ID : "1"
+    network_mode: "host"
+  cc1503_2:
+    image: cc1503-root:0.1.0-SNAPSHOT
+    environment:
+      NODE_ID: "2"
+    network_mode: "host"
+  cc1503_3:
+    image: cc1503-root:0.1.0-SNAPSHOT
+    environment:
+      NODE_ID: "3"
     network_mode: "host"

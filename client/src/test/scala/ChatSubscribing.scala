@@ -10,13 +10,17 @@ import scala.concurrent.duration._
 class ChatSubscribing extends AnyFlatSpec {
   "client" should "Subscribe to chat" in new IntegrationTest {
 
+    lazy val chatId = "chat"
     override def action: IO[Unit] = for {
-      chatId <- randomChatId
       cl <- WebsocketClient.make[IO](
         List(
-          InitSession("amogus"),
-          SubscribeChat(chatId)
+          InitSession("amogus244"),
+          SubscribeChat(chatId),
+          CreateMessageDTO(chatId, "M1"),
+          CreateMessageDTO(chatId, "M2"),
+          CreateMessageDTO(chatId, "M3")
         ).map(SendMessage),
+        port = 8081,
         readDuration = 1.hour
       )
       data <- cl.run
