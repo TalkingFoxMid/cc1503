@@ -1,5 +1,5 @@
 package ru.wdevs.cc1503.storing
-import cats.effect.{Ref, Sync}
+import cats.effect.{ParallelF, Ref, Sync}
 import cats.syntax.all._
 import ru.wdevs.cc1503.domain.Channels.Channel
 import ru.wdevs.cc1503.storing.MessageStore.StoredMessage
@@ -22,4 +22,11 @@ class MessageStoreLocalImpl[F[_]: Sync](ref: Ref[F, Map[Channel.Id, List[StoredM
     for {
       chIdToMessages <- ref.get
     } yield chIdToMessages.getOrElse(chId, List.empty).take(limit)
+}
+
+object MessageStoreLocalImpl {
+  def mk[F[_]: Sync]: F[MessageStore[F]] =
+    for {
+      ref <- Ref[F].of[Map[Channel.Id, List[StoredMessage]]](Map.empty)
+    } yield new MessageStoreLocalImpl[F](ref)
 }

@@ -2,10 +2,12 @@ import cats.effect.IO
 import cats.syntax.all._
 import org.scalatest.flatspec.AnyFlatSpec
 import ru.wdevs.cc1503.Requests.{CreateMessageDTO, InitSession, ReadMessages}
-import ru.wdevs.cc1503.WebsocketClient.SendMessage
+import ru.wdevs.cc1503.WebsocketClient.{SendMessage, Wait}
 import ru.wdevs.cc1503.{WebsocketClient, WebsocketClientImpl}
 import org.scalatest.matchers.should.Matchers._
 import ru.wdevs.cc1503.Responses._
+
+import scala.concurrent.duration._
 
 class WriteAndReadMessageTest extends AnyFlatSpec {
   "client" should "Write and read one message" in new IntegrationTest {
@@ -14,10 +16,13 @@ class WriteAndReadMessageTest extends AnyFlatSpec {
       chatId <- randomChatId
       cl <- WebsocketClient.make[IO](
         List(
-          InitSession("amogus"),
-          CreateMessageDTO(chatId, "aaa"),
-          ReadMessages(chatId, 10)
-        ).map(SendMessage)
+          SendMessage(InitSession("amogus3")),
+          SendMessage(ReadMessages(chatId, 10)),
+          SendMessage(CreateMessageDTO(chatId, "aaa")),
+          SendMessage(ReadMessages(chatId, 10))
+        ),
+        port = 8081,
+        readDuration = 1.hour
       )
       data <- cl.run
     } yield {
