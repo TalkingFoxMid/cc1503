@@ -8,9 +8,11 @@ import ru.wdevs.cc1503.domain.Channels.Channel
 import ru.wdevs.cc1503.storing.MessageStore.StoredMessage
 import ru.wdevs.cc1503.storing.{MessageStore, MessageStoreLocalImpl}
 import org.typelevel.log4cats.slf4j._
-import ru.wdevs.cc1503.anouncements.LocalMessageAnnouncer
+import ru.wdevs.cc1503.anouncements.{HttpMessageAnnouncer, LocalMessageAnnouncer}
 import ru.wdevs.cc1503.chats.ChatSubscribersRepositoryRedis
+import ru.wdevs.cc1503.endpoints.http.MsgAnnounceHttpEndpoint
 import ru.wdevs.cc1503.infra.config.ConfigLoaderImpl
+import cats.syntax.all._
 
 import java.util.logging.Level
 object MainServ extends IOApp {
@@ -20,15 +22,19 @@ object MainServ extends IOApp {
         Map.empty
       )
       implicit0(logger: Logger[IO]) <- Slf4jLogger.create[IO]
-      server = new Server[IO]
       configLoader = new ConfigLoaderImpl[IO]
       cfg <- configLoader.loadConfig
       ms: MessageStore[IO] = new MessageStoreLocalImpl[IO](ref)
-      lma <- LocalMessageAnnouncer.make[IO]
+      _ = println(cfg)
       _ <- ChatSubscribersRepositoryRedis.mkAsync[IO].use(
         subscribers => {
-          val ws = WSRoutesComponent.mkAsync[IO](ms, lma, subscribers)
-          server.start(ws)
+          val wsServer = new HttpServer[IO]
+
+          for {
+            lma <- HttpMessageAnnouncer.make[IO](subscribers, cfg)
+            ws = WSRoutesComponent.mkAsync[IO](ms, lma, subscribers)
+            _ <- wsServer.start(ws, new MsgAnnounceHttpEndpoint[IO](lma), cfg)
+          } yield ()
         }
       )
     } yield ExitCode.Success
