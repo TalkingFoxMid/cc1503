@@ -1,14 +1,20 @@
 import sbt.Keys.libraryDependencies
 
 ThisBuild / version := "0.1.0-SNAPSHOT"
-
+mainClass := Some("ru.wdevs.cc1503.MainServ")
+Compile / PB.targets := Seq(
+  scalapb.gen() -> (Compile / sourceManaged).value / "scalapb"
+)
 val dockerSettings = Seq(dockerBaseImage := "openjdk:11-jre", dockerExposedPorts := Seq(3000))
 dockerExposedPorts ++= Seq(8080)
 enablePlugins(DockerPlugin)
 enablePlugins(JavaAppPackaging)
+
 ThisBuild / scalaVersion := "2.13.8"
 dockerBaseImage := "openjdk:11"
 val commonSettings = Seq(
+  libraryDependencies += "io.grpc" % "grpc-netty-shaded" % scalapb.compiler.Version.grpcJavaVersion,
+    libraryDependencies += "org.typelevel" %% "fs2-grpc-runtime" % "2.4.12",
   libraryDependencies += "com.softwaremill.sttp.tapir" %% "tapir-core" % "1.0.1",
   libraryDependencies += "io.circe" %% "circe-core" % "0.15.0-M1",
   libraryDependencies += "com.softwaremill.sttp.tapir" %% "tapir-json-circe" % "1.0.1",
@@ -51,6 +57,9 @@ lazy val server = (project in file("server"))
   ).settings(commonSettings)
   .dependsOn(messaging_protocols)
   .aggregate(messaging_protocols)
+  .enablePlugins(Fs2Grpc)
+
+
 
 lazy val messaging_protocols = (project in file("messaging_protocols"))
   .settings(

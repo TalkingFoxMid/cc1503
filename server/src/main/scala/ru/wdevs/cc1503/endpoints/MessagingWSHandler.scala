@@ -17,7 +17,7 @@ import sttp.tapir.json.circe._
 import sttp.tapir.generic.auto._
 import cats.syntax.all._
 import org.typelevel.log4cats.Logger
-import ru.wdevs.cc1503.anouncements.MessageAnnouncer
+import ru.wdevs.cc1503.anouncements.{AnnounceReceiver, MessageAnnouncer}
 import ru.wdevs.cc1503.anouncements.MessageAnnouncer.AnnounceMessage
 import ru.wdevs.cc1503.chats.ChatSubscribersRepository
 import ru.wdevs.cc1503.domain.Channels.Channel
@@ -25,6 +25,7 @@ import ru.wdevs.cc1503.endpoints.MessagingWSHandler.RequestWithMetadata
 
 class MessagingWSHandler[F[_]: Async: Logger](
   ms: MessageStore[F],
+  receiver: AnnounceReceiver[F],
   announcer: MessageAnnouncer[F],
   subscribers: ChatSubscribersRepository[F]
 ) extends WSHandler[F, MessagingRequestDTO, MessagingResponseDTO] {
@@ -37,35 +38,6 @@ class MessagingWSHandler[F[_]: Async: Logger](
       .in("messaging")
       .out(webSocketBody[MessagingRequestDTO, CodecFormat.Json, MessagingResponseDTO, CodecFormat.Json](Fs2Streams[F]))
 
-  private def processRequest(req: MessagingRequestDTO, session: Option[String]): F[MessagingResponseDTO] =
-    (req, session) match {
-      case (InitSession(uuid), Some(session)) => RequestError("Session already exists").pure[F].widen
-      case (InitSession(uuid), None) => SessionWasInitialized().pure[F].widen
-      case (SubscribeChat(chatId), Some(session)) =>
-        subscribers.subscribeChat(Channel.Id(chatId), session)
-          .flatMap(
-            _ => {
-              println(s"$session subscribed on $chatId")
-              Logger[F].info(s"$session subscribed on $chatId")
-            }
-          )
-          .as(SubscribedToChat(chatId))
-
-      case (ReadMessages(chatId, limit), Some(session)) =>
-        ms.getMessages(Channel.Id(chatId), limit)
-          .map(
-            msgs => MessageHistory(chatId, msgs.map(msg => ChatMessage(msg.text, msg.author)))
-          )
-
-      case (CreateMessageDTO(channelId, text), Some(session)) =>
-        for {
-          _ <- ms.saveMessage(text, Channel.Id(channelId), session)
-          _ <- announcer.announce(Channel.Id(channelId), text)
-          _ <- Logger[F].info(s"Message was saved by $session")
-        } yield MessageSaved()
-      case (_, None) => RequestError("You need to initialize session").pure[F].widen
-    }
-
   private def processRequestStream(req: MessagingRequestDTO, session: Option[String]): Stream[F, MessagingResponseDTO] = {
     (req, session) match {
       case (InitSession(uuid), Some(session)) => Pull.output1(RequestError("Session already exists"))
@@ -73,7 +45,7 @@ class MessagingWSHandler[F[_]: Async: Logger](
         userChats <- Pull.eval(subscribers.userChats(uuid))
         _ <- Stream.emit(SessionWasInitialized())
           .merge {
-            announcer.subscribe(userChats)
+            receiver.subscribeToAnnounces(userChats)
               .map(e => IncomingMessage(e.chatId.id, e.text))
           }.pull.echo
       } yield ()
@@ -82,7 +54,7 @@ class MessagingWSHandler[F[_]: Async: Logger](
           _ <- Pull.eval(subscribers.subscribeChat(Channel.Id(chatId), session))
           _ <- Stream.emit(SubscribedToChat(chatId))
             .merge {
-              announcer.subscribe(Channel.Id(chatId) :: Nil)
+              receiver.subscribeToAnnounces(Channel.Id(chatId) :: Nil)
                 .map(e => IncomingMessage(e.chatId.id, e.text))
             }.pull.echo
         } yield ()
@@ -96,7 +68,7 @@ class MessagingWSHandler[F[_]: Async: Logger](
       case (CreateMessageDTO(channelId, text), Some(session)) =>
         for {
           _ <- Pull.eval(ms.saveMessage(text, Channel.Id(channelId), session))
-          _ <- Pull.eval(announcer.announce(Channel.Id(channelId), text))
+          _ <- Pull.eval(announcer.makeAnnounce(Channel.Id(channelId), text))
           _ <- Pull.eval(Logger[F].info(s"Message was saved by $session"))
           _ <- Pull.output1(MessageSaved())
         } yield ()

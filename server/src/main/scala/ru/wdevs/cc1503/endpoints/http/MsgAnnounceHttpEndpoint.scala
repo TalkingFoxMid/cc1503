@@ -13,14 +13,14 @@ import io.circe.syntax._
 import org.http4s.HttpRoutes
 import org.http4s.dsl.Http4sDsl
 import org.http4s.server.Router
-import ru.wdevs.cc1503.anouncements.MessageReceiver
+import ru.wdevs.cc1503.anouncements.AnnounceReceiver
 import ru.wdevs.cc1503.domain.Channels.Channel
 
-class MsgAnnounceHttpEndpoint[F[_]: Sync](messageReceiver: MessageReceiver[F]) extends Http4sDsl[F]{
+class MsgAnnounceHttpEndpoint[F[_]: Sync](messageReceiver: AnnounceReceiver[F]) extends Http4sDsl[F]{
   val helloWorldService = HttpRoutes.of[F] {
     case GET -> Root / "hello" / chatId / text =>
       for {
-        _ <- messageReceiver.receiveMessage(Channel.Id(chatId), text)
+        _ <- messageReceiver.receiveAnnounce(Channel.Id(chatId), text)
         res <- Ok(s"send")
       } yield res
   }

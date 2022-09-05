@@ -5,4 +5,5 @@ object AppConfig {
     nodes: Map[String, String],
     id: String
   )
+
 }

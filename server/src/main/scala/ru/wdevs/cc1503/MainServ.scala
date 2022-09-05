@@ -9,12 +9,13 @@ import ru.wdevs.cc1503.domain.Channels.Channel
 import ru.wdevs.cc1503.storing.MessageStore.StoredMessage
 import ru.wdevs.cc1503.storing.{MessageStore, MessageStoreLocalImpl}
 import org.typelevel.log4cats.slf4j._
-import ru.wdevs.cc1503.anouncements.{HttpMessageAnnouncer, LocalMessageAnnouncer}
+import ru.wdevs.cc1503.anouncements.{AnnounceArbitrator, AnnounceReceiver, GRPCMessageAnnouncer, HttpMessageAnnouncer, LocalMessageAnnouncer}
 import ru.wdevs.cc1503.chats.ChatSubscribersRepositoryRedis
 import ru.wdevs.cc1503.endpoints.http.MsgAnnounceHttpEndpoint
 import ru.wdevs.cc1503.infra.config.ConfigLoaderImpl
 import cats.syntax.all._
 import org.http4s.ember.client.EmberClientBuilder
+import ru.wdevs.cc1503.components.WSRoutesComponent
 
 import java.util.logging.Level
 import scala.concurrent.ExecutionContext.global
@@ -26,10 +27,17 @@ object MainServ extends IOApp {
       server = new HttpServer[IO]
       cfg <- (new ConfigLoaderImpl[IO]).loadConfig.toResource
       emberClient <-  EmberClientBuilder.default[IO].build
-      lma <- HttpMessageAnnouncer.make[IO](subscribers, cfg, emberClient).toResource
+
+      announceArbitrator = {
+        val httpAnnouncer = new HttpMessageAnnouncer(subscribers, cfg, emberClient)
+        val grpcAnnouncer = new GRPCMessageAnnouncer[IO](subscribers, cfg)
+        new AnnounceArbitrator[IO](httpAnnouncer, grpcAnnouncer)
+      }
+      messageReceiver <- AnnounceReceiver.make[IO].toResource
       ms <- MessageStoreLocalImpl.mk[IO].toResource
-      ws = WSRoutesComponent.mkAsync[IO](ms, lma, subscribers)
-      _ <- server.start(ws, new MsgAnnounceHttpEndpoint[IO](lma), cfg).toResource
+      ws = WSRoutesComponent.mkAsync[IO](ms, messageReceiver, announceArbitrator, subscribers)
+      grpcServer = new GrpcServer[IO](messageReceiver)
+      _ <- server.start(ws, new MsgAnnounceHttpEndpoint[IO](messageReceiver), cfg).toResource
     } yield ExitCode.Success
   }.useForever
 }

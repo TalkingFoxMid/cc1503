@@ -21,20 +21,7 @@ class HttpMessageAnnouncer[F[_]: Sync: Logger](
     subscribers: ChatSubscribersRepository[F],
     config: AppConfig,
     client: Client[F],
-    queue: Queue[F, MessageAnnouncer.AnnounceMessage]
-) extends MessageAnnouncer[F]
-    with MessageReceiver[F] {
-
-  private val eventsStream = Pull
-    .loop[F, MessageAnnouncer.AnnounceMessage, Unit](_ =>
-      for {
-        el <- Pull.eval(queue.take)
-        _ <- Pull.eval(Logger[F].info("FOUND MESSAGE AT QUEUE"))
-        _ <- Pull.output1(el)
-      } yield Some(())
-    )
-    .apply(())
-    .stream
+) extends MessageAnnouncer[F] {
 
   private def sendToNode(host: String, chatId: Channel.Id, text: String): F[Unit] =
     for {
@@ -42,58 +29,11 @@ class HttpMessageAnnouncer[F[_]: Sync: Logger](
       _ <- client.get(s"http://${host}/announce/hello/${chatId.id}/$text")(Sync[F].pure)
     } yield ()
 
-  override def announce(chatId: Channel.Id, text: String): F[Unit] =
+  override def makeAnnounce(chatId: Channel.Id, text: String): F[Unit] =
     config.nodes.toList.traverse {
       case (id, ip) if id != config.id => sendToNode(ip, chatId, text)
       case _ => Monad[F].unit
     }.void
 
-  override def subscribe(
-      chatIds: List[Channel.Id]
-  ): fs2.Stream[F, MessageAnnouncer.AnnounceMessage] =
-    eventsStream.filter(ev => chatIds.contains(ev.chatId))
-
-  override def receiveMessage(chatId: Channel.Id, text: String): F[Unit] =
-    Logger[F].info(s"Received message from ${chatId.id}") *> queue.offer(
-      AnnounceMessage(chatId, text)
-    )
-
 }
 
-object HttpMessageAnnouncer {
-  def make[F[_]: Async: Logger](
-      subscribers: ChatSubscribersRepository[F],
-      config: AppConfig,
-      client: Client[F]
-  ): F[HttpMessageAnnouncer[F]] =
-    for {
-      q <- Queue.unbounded[F, MessageAnnouncer.AnnounceMessage]
-    } yield new HttpMessageAnnouncer[F](subscribers, config, client, q)
-}
-
-object TEST extends App {
-  import scala.concurrent.duration._
-
-  val f = for {
-    q <- Queue.unbounded[IO, Int]
-    eventsStream = Pull
-      .loop[IO, Int, Unit](_ =>
-        for {
-          el <- Pull.eval(q.take)
-          _ <- Pull.output1(el)
-        } yield Some(())
-      )
-      .apply(())
-      .stream
-    _ <- q.offer(10)
-    z <- List.range(0, 100)
-      .traverse(
-        el => q.offer(el) *> IO.sleep(5.seconds)
-      ).start
-    _ <- eventsStream
-      .flatMap(
-        el => Stream.eval[IO, Unit](IO(println(el)))
-      ).compile.drain
-  } yield ()
-  f.unsafeRunSync()(IORuntime.global)
-}

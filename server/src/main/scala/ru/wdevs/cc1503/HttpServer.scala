@@ -6,6 +6,7 @@ import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.server.Router
 import cats.syntax.all._
 import org.typelevel.log4cats.Logger
+import ru.wdevs.cc1503.components.WSRoutesComponent
 import ru.wdevs.cc1503.endpoints.http.MsgAnnounceHttpEndpoint
 import ru.wdevs.cc1503.infra.config.AppConfig.AppConfig
 
