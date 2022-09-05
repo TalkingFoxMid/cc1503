@@ -1,5 +1,6 @@
 package ru.wdevs.cc1503.anouncements
 import cats.Monad
+import cats.data.NonEmptyList
 import cats.effect.IO
 import cats.effect.kernel.{Async, Sync}
 import cats.effect.std.Queue
@@ -11,29 +12,23 @@ import cats.syntax.all._
 import fs2.{Pull, Stream}
 import org.http4s.client.Client
 import org.typelevel.log4cats.Logger
-import ru.wdevs.cc1503.anouncements.MessageAnnouncer.AnnounceMessage
+import ru.wdevs.cc1503.anouncements.AnnounceManager.AnnounceMessage
+import ru.wdevs.cc1503.domain.Nodes.{Node, NodeAddress}
 import ru.wdevs.cc1503.infra.config.AppConfig.AppConfig
 import sttp.client3._
 
 import scala.concurrent.ExecutionContext.global
 
 class HttpMessageAnnouncer[F[_]: Sync: Logger](
-    subscribers: ChatSubscribersRepository[F],
-    config: AppConfig,
-    client: Client[F],
-) extends MessageAnnouncer[F] {
+    client: Client[F]
+) {
 
-  private def sendToNode(host: String, chatId: Channel.Id, text: String): F[Unit] =
+  private def sendToNode(address: NodeAddress, chatId: Channel.Id, text: String): F[Unit] =
     for {
-      _ <- Logger[F].info(s"Sending msg to http://${host}/announce/hello/${chatId.id}/${text}")
-      _ <- client.get(s"http://${host}/announce/hello/${chatId.id}/$text")(Sync[F].pure)
+      _ <- client.get(s"http://${address.host}:${address.port}/announce/hello/${chatId.id}/$text")(Sync[F].pure)
     } yield ()
 
-  override def makeAnnounce(chatId: Channel.Id, text: String): F[Unit] =
-    config.nodes.toList.traverse {
-      case (id, ip) if id != config.id => sendToNode(ip, chatId, text)
-      case _ => Monad[F].unit
-    }.void
-
+  def makeTargetAnnounce(chatId: Channel.Id, text: String, nodes: NonEmptyList[Node]): F[Unit] =
+    nodes.traverse(node => sendToNode(node.address, chatId, text)).void
 }
 

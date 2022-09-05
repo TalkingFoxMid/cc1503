@@ -17,17 +17,17 @@ import sttp.tapir.json.circe._
 import sttp.tapir.generic.auto._
 import cats.syntax.all._
 import org.typelevel.log4cats.Logger
-import ru.wdevs.cc1503.anouncements.{AnnounceReceiver, MessageAnnouncer}
-import ru.wdevs.cc1503.anouncements.MessageAnnouncer.AnnounceMessage
+import ru.wdevs.cc1503.anouncements.{AnnounceReceiver, AnnounceManager}
+import ru.wdevs.cc1503.anouncements.AnnounceManager.AnnounceMessage
 import ru.wdevs.cc1503.chats.ChatSubscribersRepository
 import ru.wdevs.cc1503.domain.Channels.Channel
 import ru.wdevs.cc1503.endpoints.MessagingWSHandler.RequestWithMetadata
 
 class MessagingWSHandler[F[_]: Async: Logger](
-  ms: MessageStore[F],
-  receiver: AnnounceReceiver[F],
-  announcer: MessageAnnouncer[F],
-  subscribers: ChatSubscribersRepository[F]
+                                               ms: MessageStore[F],
+                                               receiver: AnnounceReceiver[F],
+                                               announcer: AnnounceManager[F],
+                                               subscribers: ChatSubscribersRepository[F]
 ) extends WSHandler[F, MessagingRequestDTO, MessagingResponseDTO] {
   override val _async: Async[F] = Async[F]
 

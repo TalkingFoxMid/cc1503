@@ -27,13 +27,14 @@ object MainServ extends IOApp {
       server = new HttpServer[IO]
       cfg <- (new ConfigLoaderImpl[IO]).loadConfig.toResource
       emberClient <-  EmberClientBuilder.default[IO].build
+      messageReceiver <- AnnounceReceiver.make[IO].toResource
 
       announceArbitrator = {
-        val httpAnnouncer = new HttpMessageAnnouncer(subscribers, cfg, emberClient)
-        val grpcAnnouncer = new GRPCMessageAnnouncer[IO](subscribers, cfg)
-        new AnnounceArbitrator[IO](httpAnnouncer, grpcAnnouncer)
+        val httpAnnouncer = new HttpMessageAnnouncer(emberClient)
+        val grpcAnnouncer = new GRPCMessageAnnouncer[IO]
+        val local = new LocalMessageAnnouncer[IO](messageReceiver)
+        new AnnounceArbitrator[IO](httpAnnouncer, grpcAnnouncer, local, subscribers, cfg, )
       }
-      messageReceiver <- AnnounceReceiver.make[IO].toResource
       ms <- MessageStoreLocalImpl.mk[IO].toResource
       ws = WSRoutesComponent.mkAsync[IO](ms, messageReceiver, announceArbitrator, subscribers)
       grpcServer = new GrpcServer[IO](messageReceiver)

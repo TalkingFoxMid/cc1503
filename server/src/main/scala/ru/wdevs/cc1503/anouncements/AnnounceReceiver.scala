@@ -7,7 +7,7 @@ import cats.syntax.all._
 import fs2.Pull
 import org.http4s.client.Client
 import org.typelevel.log4cats.Logger
-import ru.wdevs.cc1503.anouncements.MessageAnnouncer.AnnounceMessage
+import ru.wdevs.cc1503.anouncements.AnnounceManager.AnnounceMessage
 import ru.wdevs.cc1503.chats.ChatSubscribersRepository
 import ru.wdevs.cc1503.domain.Channels.Channel
 import ru.wdevs.cc1503.infra.config.AppConfig.AppConfig
@@ -17,14 +17,14 @@ trait AnnounceReceiver[F[_]] {
 
   def subscribeToAnnounces(
       chatIds: List[Channel.Id]
-  ): fs2.Stream[F, MessageAnnouncer.AnnounceMessage]
+  ): fs2.Stream[F, AnnounceManager.AnnounceMessage]
 }
 
 class AnnounceReceiverImpl[F[_]: Logger: Monad](
-    queue: Queue[F, MessageAnnouncer.AnnounceMessage]
+    queue: Queue[F, AnnounceManager.AnnounceMessage]
 ) extends AnnounceReceiver[F] {
   private val eventsStream = Pull
-    .loop[F, MessageAnnouncer.AnnounceMessage, Unit](_ =>
+    .loop[F, AnnounceManager.AnnounceMessage, Unit](_ =>
       for {
         el <- Pull.eval(queue.take)
         _ <- Pull.eval(Logger[F].info("FOUND MESSAGE AT QUEUE"))
@@ -36,7 +36,7 @@ class AnnounceReceiverImpl[F[_]: Logger: Monad](
 
   override def subscribeToAnnounces(
       chatIds: List[Channel.Id]
-  ): fs2.Stream[F, MessageAnnouncer.AnnounceMessage] =
+  ): fs2.Stream[F, AnnounceManager.AnnounceMessage] =
     eventsStream.filter(ev => chatIds.contains(ev.chatId))
 
   override def receiveAnnounce(chatId: Channel.Id, text: String): F[Unit] =
@@ -48,6 +48,6 @@ class AnnounceReceiverImpl[F[_]: Logger: Monad](
 object AnnounceReceiver {
   def make[F[_]: Async: Logger]: F[AnnounceReceiver[F]] =
     for {
-      q <- Queue.unbounded[F, MessageAnnouncer.AnnounceMessage]
+      q <- Queue.unbounded[F, AnnounceManager.AnnounceMessage]
     } yield new AnnounceReceiverImpl[F](q)
 }

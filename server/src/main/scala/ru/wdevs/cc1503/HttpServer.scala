@@ -14,10 +14,9 @@ class HttpServer[F[_]: Async: Logger] {
   def start(wsComp: WSRoutesComponent[F], announceEndpoint: MsgAnnounceHttpEndpoint[F], config: AppConfig): F[Unit] = {
     for {
       port <- Sync[F].fromOption(
-        config.nodes.get(config.id).flatMap(_.split(":").last.toIntOption),
+        config.nodes.get(config.id).map(_.port),
         new RuntimeException("Failed to find node port")
       )
-      _ = println(port)
       _ <- Logger[F].info("Server is starting...")
       _ <- BlazeServerBuilder[F]
         .bindHttp(port, "localhost")
