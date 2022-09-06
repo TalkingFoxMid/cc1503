@@ -39,9 +39,4 @@ object ChatSubscribersRepositoryRedis {
   def redisChatUsersSet(chat: Channel.Id): String = s"chat_users:${chat.id}"
 
   def userChatsSet(userId: String): String = s"user_chats:$userId"
-
-  def mkAsync[F[_]: Async]: Resource[F, ChatSubscribersRepositoryRedis[F]] =
-    Redis[F].utf8("redis://localhost").map(
-      redisCommands => new ChatSubscribersRepositoryRedis(redisCommands)
-    )
 }

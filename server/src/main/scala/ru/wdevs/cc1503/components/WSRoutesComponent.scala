@@ -1,10 +1,10 @@
-package ru.wdevs.cc1503
+package ru.wdevs.cc1503.components
 
-import cats.effect.kernel.{Async, Sync}
+import cats.effect.kernel.Async
 import org.http4s.HttpRoutes
 import org.http4s.server.websocket.WebSocketBuilder2
 import org.typelevel.log4cats.Logger
-import ru.wdevs.cc1503.anouncements.MessageAnnouncer
+import ru.wdevs.cc1503.anouncements.{AnnounceReceiver, AnnounceManager}
 import ru.wdevs.cc1503.chats.ChatSubscribersRepository
 import ru.wdevs.cc1503.endpoints.{EchoReverseWSHandler, MessagingWSHandler}
 import ru.wdevs.cc1503.storing.MessageStore
@@ -16,7 +16,7 @@ trait WSRoutesComponent[F[_]] {
 
 object WSRoutesComponent {
 
-  def mkAsync[F[_]: Async: Logger](ms: MessageStore[F], announcer: MessageAnnouncer[F], subscribers: ChatSubscribersRepository[F]): WSRoutesComponent[F] =
+  def mkAsync[F[_]: Async: Logger](ms: MessageStore[F], receiver: AnnounceReceiver[F], announcer: AnnounceManager[F], subscribers: ChatSubscribersRepository[F]): WSRoutesComponent[F] =
     new WSRoutesComponent[F] {
 
       override def routes: WebSocketBuilder2[F] => HttpRoutes[F] =
@@ -24,7 +24,7 @@ object WSRoutesComponent {
           .toWebSocketRoutes(
             List(
               new EchoReverseWSHandler[F]().buildWithLogic,
-              new MessagingWSHandler[F](ms, announcer, subscribers).buildWithLogic
+              new MessagingWSHandler[F](ms, receiver, announcer, subscribers).buildWithLogic
             )
           )
     }
