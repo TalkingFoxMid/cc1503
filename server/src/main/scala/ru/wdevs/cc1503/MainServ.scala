@@ -11,11 +11,11 @@ import ru.wdevs.cc1503.storing.{MessageStore, MessageStoreLocalImpl}
 import org.typelevel.log4cats.slf4j._
 import ru.wdevs.cc1503.anouncements.{AnnounceArbitrator, AnnounceReceiver, GRPCMessageAnnouncer, HttpMessageAnnouncer, LocalMessageAnnouncer}
 import ru.wdevs.cc1503.chats.ChatSubscribersRepositoryRedis
-import ru.wdevs.cc1503.endpoints.http.MsgAnnounceHttpEndpoint
 import ru.wdevs.cc1503.infra.config.ConfigLoaderImpl
 import cats.syntax.all._
 import org.http4s.ember.client.EmberClientBuilder
-import ru.wdevs.cc1503.components.WSRoutesComponent
+import ru.wdevs.cc1503.components.{RedisComponent, WSRoutesComponent}
+import ru.wdevs.cc1503.handling.announce.{GrpcAnnounceHandler, HttpAnnounceHandler}
 
 import java.util.logging.Level
 import scala.concurrent.ExecutionContext.global
@@ -23,8 +23,7 @@ object MainServ extends IOApp {
   override def run(args: List[String]): IO[effect.ExitCode] = {
     for {
       implicit0(logger: Logger[IO]) <- Slf4jLogger.create[IO].toResource
-      subscribers <- ChatSubscribersRepositoryRedis.mkAsync[IO]
-      server = new HttpServer[IO]
+      RedisComponent(subscribers, matcher) <- RedisComponent.make[IO]
       cfg <- (new ConfigLoaderImpl[IO]).loadConfig.toResource
       emberClient <-  EmberClientBuilder.default[IO].build
       messageReceiver <- AnnounceReceiver.make[IO].toResource
@@ -33,12 +32,24 @@ object MainServ extends IOApp {
         val httpAnnouncer = new HttpMessageAnnouncer(emberClient)
         val grpcAnnouncer = new GRPCMessageAnnouncer[IO]
         val local = new LocalMessageAnnouncer[IO](messageReceiver)
-        new AnnounceArbitrator[IO](httpAnnouncer, grpcAnnouncer, local, subscribers, cfg, )
+        new AnnounceArbitrator[IO](httpAnnouncer, grpcAnnouncer, local, subscribers, cfg, matcher)
       }
       ms <- MessageStoreLocalImpl.mk[IO].toResource
-      ws = WSRoutesComponent.mkAsync[IO](ms, messageReceiver, announceArbitrator, subscribers)
-      grpcServer = new GrpcServer[IO](messageReceiver)
-      _ <- server.start(ws, new MsgAnnounceHttpEndpoint[IO](messageReceiver), cfg).toResource
+
+      httpRun = {
+        val wsComp = WSRoutesComponent.mkAsync[IO](ms, messageReceiver, announceArbitrator, subscribers)
+        val handlers = (new HttpAnnounceHandler[IO](messageReceiver) :: Nil).map(_.routes)
+        val httpServ = new HttpServer[IO](wsComp, handlers, cfg)
+        httpServ.start.toResource
+      }.start
+
+      grpcRun = {
+        val handlers = (new GrpcAnnounceHandler[IO](messageReceiver)) :: Nil
+        val grpcServ = new GrpcServer[IO](handlers)
+        grpcServ.start
+      }
+
+      _ <- (httpRun :: grpcRun :: Nil).parSequence
     } yield ExitCode.Success
   }.useForever
 }

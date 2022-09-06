@@ -30,7 +30,7 @@ class AnnounceArbitrator[F[_]: Concurrent: Parallel: Logger](
         id => cfg.nodes.get(id).map(address => Node(id, address))
           .toRight(id)
       ).separate
-    } yield foundNodes.toSet
+    } yield foundNodes
 
   private def announceTarget(chatId: Channel.Id, text: String): F[Unit] =
     for {
