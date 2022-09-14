@@ -26,7 +26,12 @@ val commonSettings = Seq(
     libraryDependencies += "com.softwaremill.sttp.client3" %% "core" % "3.7.0",
   libraryDependencies += "com.softwaremill.sttp.client3" %% "async-http-client-backend-cats" % "3.7.0",
   libraryDependencies += "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % "3.7.0",
-  libraryDependencies += "dev.profunktor" %% "redis4cats-core" % "1.2.0",
+  // https://mvnrepository.com/artifact/co.fs2/fs2-core
+  libraryDependencies += "co.fs2" %% "fs2-core" % "3.2.14",
+  // https://mvnrepository.com/artifact/co.fs2/fs2-io
+  libraryDependencies += "co.fs2" %% "fs2-io" % "3.2.14",
+
+    libraryDependencies += "dev.profunktor" %% "redis4cats-core" % "1.2.0",
   libraryDependencies += "dev.profunktor" %% "redis4cats-log4cats" % "1.2.0",
   // https://mvnrepository.com/artifact/dev.profunktor/redis4cats-effects
   libraryDependencies += "dev.profunktor" %% "redis4cats-effects" % "1.2.0",
