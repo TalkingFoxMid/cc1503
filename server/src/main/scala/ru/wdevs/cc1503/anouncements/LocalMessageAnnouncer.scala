@@ -11,6 +11,6 @@ import scala.collection.mutable
 
 class LocalMessageAnnouncer[F[_]: Async](receiver: AnnounceReceiver[F]) {
 
-  def makeAnnounce(chatId: Channel.Id, text: String): F[Unit] =
-    receiver.receiveAnnounce(chatId, text)
+  def makeAnnounce(chatId: Channel.Id, text: String, author: String): F[Unit] =
+    receiver.receiveAnnounce(chatId, text, author)
 }

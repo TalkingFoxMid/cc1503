@@ -38,25 +38,28 @@ class MessagingWSHandler[F[_]: Async: Logger](
       .in("messaging")
       .out(webSocketBody[MessagingRequestDTO, CodecFormat.Json, MessagingResponseDTO, CodecFormat.Json](Fs2Streams[F]))
 
+  private def receiverStream(userChats: List[Channel.Id]): Stream[F, IncomingMessage] = receiver.subscribeToAnnounces(userChats)
+    .map(e => IncomingMessage(e.chatId.id, e.text, e.author))
+
   private def processRequestStream(req: MessagingRequestDTO, session: Option[String]): Stream[F, MessagingResponseDTO] = {
     (req, session) match {
       case (InitSession(uuid), Some(session)) => Pull.output1(RequestError("Session already exists"))
       case (InitSession(uuid), None) => for {
         userChats <- Pull.eval(subscribers.userChats(uuid))
         _ <- Stream.emit(SessionWasInitialized())
-          .merge {
-            receiver.subscribeToAnnounces(userChats)
-              .map(e => IncomingMessage(e.chatId.id, e.text))
-          }.pull.echo
+          .merge(receiverStream(userChats)).pull.echo
       } yield ()
       case (SubscribeChat(chatId), Some(session)) =>
         for {
-          _ <- Pull.eval(subscribers.subscribeChat(Channel.Id(chatId), session))
-          _ <- Stream.emit(SubscribedToChat(chatId))
-            .merge {
-              receiver.subscribeToAnnounces(Channel.Id(chatId) :: Nil)
-                .map(e => IncomingMessage(e.chatId.id, e.text))
-            }.pull.echo
+          chats <- Pull.eval(subscribers.userChats(session))
+          _ = println(chats)
+          _ <- if (chats.contains_(Channel.Id(chatId))) {
+            Pull.output1(AlreadySubscribed(chatId))
+          } else for {
+            _ <- Pull.eval(subscribers.subscribeChat(Channel.Id(chatId), session))
+            _ <- Stream.emit(SubscribedToChat(chatId))
+              .merge(receiverStream(Channel.Id(chatId) :: Nil)).pull.echo
+          } yield ()
         } yield ()
 
       case (ReadMessages(chatId, limit), Some(session)) =>
@@ -68,7 +71,7 @@ class MessagingWSHandler[F[_]: Async: Logger](
       case (CreateMessageDTO(channelId, text), Some(session)) =>
         for {
           _ <- Pull.eval(ms.saveMessage(text, Channel.Id(channelId), session))
-          _ <- Pull.eval(announcer.makeAnnounce(Channel.Id(channelId), text))
+          _ <- Pull.eval(announcer.makeAnnounce(Channel.Id(channelId), text, session))
           _ <- Pull.eval(Logger[F].info(s"Message was saved by $session"))
           _ <- Pull.output1(MessageSaved())
         } yield ()

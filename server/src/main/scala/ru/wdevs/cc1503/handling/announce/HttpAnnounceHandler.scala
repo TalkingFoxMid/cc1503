@@ -10,9 +10,9 @@ import ru.wdevs.cc1503.handling.HttpHandler
 
 class HttpAnnounceHandler[F[_]: Monad](receiver: AnnounceReceiver[F]) extends HttpHandler[F] with Http4sDsl[F] {
   private val announceService = HttpRoutes.of[F] {
-    case GET -> Root / chatId / text =>
+    case GET -> Root / chatId / text / author =>
       for {
-        _ <- receiver.receiveAnnounce(Channel.Id(chatId), text)
+        _ <- receiver.receiveAnnounce(Channel.Id(chatId), text, author)
         res <- Ok(s"send")
       } yield res
   }

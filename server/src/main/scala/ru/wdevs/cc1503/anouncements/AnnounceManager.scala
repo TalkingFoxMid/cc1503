@@ -5,9 +5,9 @@ import fs2.Stream
 import ru.wdevs.cc1503.anouncements.AnnounceManager.AnnounceMessage
 
 trait AnnounceManager[F[_]] {
-  def makeAnnounce(chatId: Channel.Id, text: String): F[Unit]
+  def makeAnnounce(chatId: Channel.Id, text: String, author: String): F[Unit]
 }
 
 object AnnounceManager {
-  case class AnnounceMessage(chatId: Channel.Id, text: String)
+  case class AnnounceMessage(chatId: Channel.Id, text: String, author: String)
 }

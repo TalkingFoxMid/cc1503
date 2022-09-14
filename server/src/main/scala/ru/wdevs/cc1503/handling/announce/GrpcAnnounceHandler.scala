@@ -15,7 +15,7 @@ class GrpcAnnounceHandler[F[_]: Async](receiver: AnnounceReceiver[F]) extends Gr
   val srvcDef =
     AnnouncementServiceFs2Grpc
       .bindServiceResource[F](
-        (message, _) => receiver.receiveAnnounce(Channel.Id(message.chatId), message.text)
+        (message, _) => receiver.receiveAnnounce(Channel.Id(message.chatId), message.text, message.author)
           .as(AnResponse(0))
       )
 }

@@ -46,8 +46,9 @@ class AnnounceArbitrator[F[_]: Concurrent: Parallel: Logger](
       )
     } yield ()
 
-  override def makeAnnounce(chatId: Channel.Id, text: String): F[Unit] =
+  override def makeAnnounce(chatId: Channel.Id, text: String, author: String): F[Unit] =
     for {
+      _ <- local.makeAnnounce(chatId, text, author)
       _ <- announceTarget(chatId, text)
         .whenA(cfg.announce.announceViaGrpc || cfg.announce.announceViaHttp)
     } yield ()
