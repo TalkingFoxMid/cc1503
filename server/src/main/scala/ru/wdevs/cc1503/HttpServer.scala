@@ -24,7 +24,7 @@ class HttpServer[F[_]: Async: Logger](wsComp: WSRoutesComponent[F], httpRoutes: 
       )
       _ <- Logger[F].info("HTTP Server is starting...")
       _ <- BlazeServerBuilder[F]
-        .bindHttp(port, "localhost")
+        .bindHttp(port, "0.0.0.0")
         .withHttpWebSocketApp(wsb => Router(
           {
             ("/ws" -> wsComp.routes(wsb)) ::

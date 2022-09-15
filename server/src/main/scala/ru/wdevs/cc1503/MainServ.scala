@@ -45,7 +45,7 @@ object MainServ extends IOApp {
 
       grpcRun = {
         val handlers = (new GrpcAnnounceHandler[IO](messageReceiver)) :: Nil
-        val grpcServ = new GrpcServer[IO](handlers)
+        val grpcServ = new GrpcServer[IO](handlers, cfg)
         grpcServ.start
       }
 

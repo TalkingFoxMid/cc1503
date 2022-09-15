@@ -1,7 +1,7 @@
 package ru.wdevs.cc1503.anouncements
 
 import cats.{Monad, Parallel}
-import cats.effect.{ExitCode, IO, IOApp}
+import cats.effect.{ExitCode, IO, IOApp, Ref}
 import cats.effect.kernel.Async
 import cats.effect.std.Queue
 import cats.syntax.all._
@@ -29,14 +29,13 @@ class AnnounceReceiverImpl[F[_]: Logger: Monad](
 ) extends AnnounceReceiver[F] {
 
 
-
   override def subscribeToAnnounces(
       chatIds: List[Channel.Id]
   ): fs2.Stream[F, AnnounceManager.AnnounceMessage] =
     topic.subscribe(100).filter(ev => chatIds.contains(ev.chatId))
 
   override def receiveAnnounce(chatId: Channel.Id, text: String, author: String): F[Unit] =
-    Logger[F].info(s"GRPC: Received message from ${chatId.id}") *> topic.publish1(
+    topic.publish1(
       AnnounceMessage(chatId, text, author)
     ).void
 }
@@ -77,5 +76,25 @@ object Testing extends IOApp {
         } yield ()
       )
 
+    } yield ExitCode.Success
+}
+
+object WlappaHubTest extends IOApp {
+  import scala.concurrent.duration._
+  override def run(args: List[String]): IO[ExitCode] =
+    for {
+      topic <- Topic[IO, Int]
+      eventsStream = topic.subscribe(100)
+      _ <- eventsStream.map(println _)
+        .compile.drain.start
+      _ <- eventsStream.map(println _)
+        .compile.drain.start
+
+      _ <- List.range(0, 50).traverse(
+        d => for {
+          _ <- IO.sleep(3.seconds)
+          _ <- topic.publish1(d)
+        } yield ()
+      )
     } yield ExitCode.Success
 }

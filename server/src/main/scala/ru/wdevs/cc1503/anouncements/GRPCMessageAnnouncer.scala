@@ -21,7 +21,8 @@ class GRPCMessageAnnouncer[F[_]: Async: Logger](
 ) {
   private def sendToNode(address: NodeAddress, chatId: Channel.Id, text: String): F[Unit] =
     NettyChannelBuilder
-      .forAddress(address.host, address.port)
+      .forAddress(address.host, address.grpcPort)
+      .usePlaintext()
       .resource[F].flatMap(r => AnnouncementServiceFs2Grpc.stubResource[F](r))
       .use(
         _.announce(AnnounceMessage(chatId.id, text), new Metadata).void

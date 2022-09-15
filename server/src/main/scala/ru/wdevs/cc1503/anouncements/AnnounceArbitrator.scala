@@ -10,7 +10,7 @@ import fs2.{Pull, Stream}
 import org.typelevel.log4cats.Logger
 import ru.wdevs.cc1503.chats.ChatSubscribersRepository
 import ru.wdevs.cc1503.detecting.NodeUserMatcher
-import ru.wdevs.cc1503.domain.Nodes.Node
+import ru.wdevs.cc1503.domain.Nodes.{Node, NodeAddress}
 import ru.wdevs.cc1503.infra.config.AppConfig.{AnnounceConfig, AppConfig}
 
 class AnnounceArbitrator[F[_]: Concurrent: Parallel: Logger](
@@ -30,15 +30,17 @@ class AnnounceArbitrator[F[_]: Concurrent: Parallel: Logger](
         id => cfg.nodes.get(id).map(address => Node(id, address))
           .toRight(id)
       ).separate
-    } yield foundNodes
+    } yield cfg.nodes.map {
+      case (str, address) => Node(str, NodeAddress(address.host, address.port, address.grpcPort))
+    }.toList
 
-  private def announceTarget(chatId: Channel.Id, text: String): F[Unit] =
+  private def announceTarget(chatId: Channel.Id, text: String, author: String): F[Unit] =
     for {
       targetNodesOpt <- findTargetNodes(chatId).map(_.toNel)
       _ <- targetNodesOpt.traverse(
         targetNodes =>
           for {
-            _ <- http.makeTargetAnnounce(chatId, text, targetNodes)
+            _ <- http.makeTargetAnnounce(chatId, text, targetNodes, author)
               .whenA(cfg.announce.announceViaHttp)
             _ <- grpc.makeTargetAnnounce(chatId, text, targetNodes)
               .whenA(cfg.announce.announceViaGrpc)
@@ -49,7 +51,7 @@ class AnnounceArbitrator[F[_]: Concurrent: Parallel: Logger](
   override def makeAnnounce(chatId: Channel.Id, text: String, author: String): F[Unit] =
     for {
       _ <- local.makeAnnounce(chatId, text, author)
-      _ <- announceTarget(chatId, text)
+      _ <- announceTarget(chatId, text, author)
         .whenA(cfg.announce.announceViaGrpc || cfg.announce.announceViaHttp)
     } yield ()
 }

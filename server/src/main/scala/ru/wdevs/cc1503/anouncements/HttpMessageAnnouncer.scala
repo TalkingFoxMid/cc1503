@@ -23,12 +23,11 @@ class HttpMessageAnnouncer[F[_]: Sync: Logger](
     client: Client[F]
 ) {
 
-  private def sendToNode(address: NodeAddress, chatId: Channel.Id, text: String): F[Unit] =
-    for {
-      _ <- client.get(s"http://${address.host}:${address.port}/announce/hello/${chatId.id}/$text")(Sync[F].pure)
-    } yield ()
+  private def sendToNode(address: NodeAddress, chatId: Channel.Id, text: String, author: String): F[Unit] =
+    client.get(s"http://${address.host}:${address.port}/announce/${chatId.id}/$text/$author")(Sync[F].pure)
+      .void
 
-  def makeTargetAnnounce(chatId: Channel.Id, text: String, nodes: NonEmptyList[Node]): F[Unit] =
-    nodes.traverse(node => sendToNode(node.address, chatId, text)).void
+  def makeTargetAnnounce(chatId: Channel.Id, text: String, nodes: NonEmptyList[Node], author: String): F[Unit] =
+    nodes.traverse(node => sendToNode(node.address, chatId, text, author)).void
 }
 
